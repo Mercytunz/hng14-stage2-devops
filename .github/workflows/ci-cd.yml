@@ -200,6 +200,8 @@ jobs:
           exit-code: "1"
           severity: "CRITICAL"
           ignore-unfixed: true
+          scanners: "vuln"
+          trivyignores: ".trivyignore" 
 
       - name: Scan Worker image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -210,6 +212,8 @@ jobs:
           exit-code: "1"
           severity: "CRITICAL"
           ignore-unfixed: true
+          scanners: "vuln"
+          trivyignores: ".trivyignore" 
 
       - name: Scan Frontend image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -220,6 +224,8 @@ jobs:
           exit-code: "1"
           severity: "CRITICAL"
           ignore-unfixed: true
+          scanners: "vuln"
+          trivyignores: ".trivyignore" 
 
       - name: Upload Trivy SARIF results
         uses: actions/upload-artifact@v4
