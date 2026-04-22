@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+
 # Bug fix 1 & 2: use env vars for Redis host and password (was hardcoded "localhost" with no auth)
 def get_redis_client():
     host = os.getenv("REDIS_HOST", "redis")
@@ -25,6 +26,7 @@ def get_redis_client():
             logger.warning("Redis not ready (attempt %d/10): %s", attempt + 1, e)
             time.sleep(2)
     raise RuntimeError("Could not connect to Redis after 10 attempts")
+
 
 r = get_redis_client()
 

@@ -7,6 +7,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 # Bug fix 5 & 6: use env vars for Redis host and password (was hardcoded "localhost" with no auth)
 def get_redis_client():
     host = os.getenv("REDIS_HOST", "redis")
@@ -23,15 +24,18 @@ def get_redis_client():
             time.sleep(2)
     raise RuntimeError("Could not connect to Redis after 10 attempts")
 
+
 r = get_redis_client()
 
 # Bug fix 7: handle SIGTERM gracefully (was imported but never used)
 running = True
 
+
 def shutdown(signum, frame):
     global running
     logger.info("Shutdown signal received, finishing current job then exiting...")
     running = False
+
 
 signal.signal(signal.SIGTERM, shutdown)
 signal.signal(signal.SIGINT, shutdown)
@@ -39,7 +43,7 @@ signal.signal(signal.SIGINT, shutdown)
 
 def process_job(job_id):
     logger.info("Processing job %s", job_id)
-    time.sleep(2)  # simulate work
+    time.sleep(2)
     r.hset(f"job:{job_id}", "status", "completed")
     logger.info("Done: %s", job_id)
 
