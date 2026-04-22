@@ -44,7 +44,14 @@ jobs:
 
       - name: Lint JavaScript (eslint)
         working-directory: frontend
-        run: npx eslint app.js --no-eslintrc -c '{"env":{"node":true,"es2021":true},"parserOptions":{"ecmaVersion":2021},"rules":{"no-unused-vars":"warn","no-undef":"error"}}'
+        run: |
+          npx eslint app.js \
+            --no-eslintrc \
+            --env node \
+            --env es2021 \
+            --parser-options "ecmaVersion:2021" \
+            --rule "no-undef: error" \
+            --rule "no-unused-vars: warn" 
 
       - name: Lint Dockerfiles (hadolint)
         uses: hadolint/hadolint-action@v3.1.0
