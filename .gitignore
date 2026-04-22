@@ -1,0 +1,19 @@
+# Never commit secrets
+.env
+**/.env
+api/.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Trivy / scan outputs
+trivy-results*.sarif

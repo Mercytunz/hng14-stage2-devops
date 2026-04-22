@@ -3,10 +3,15 @@ const axios = require('axios');
 const path = require('path');
 const app = express();
 
-const API_URL = "http://localhost:8000";
+// Bug fix 9: API_URL was hardcoded to "localhost" — fails in Docker; read from env instead
+const API_URL = process.env.API_URL || "http://api:8000";
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'views')));
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 app.post('/submit', async (req, res) => {
   try {

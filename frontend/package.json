@@ -2,11 +2,18 @@
   "name": "frontend",
   "version": "1.0.0",
   "main": "app.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "lint": "eslint app.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0"
   }
 }
