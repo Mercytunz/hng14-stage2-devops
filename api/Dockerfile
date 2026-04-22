@@ -1,24 +1,21 @@
 # ---- Build stage ----
-FROM python:3.12-slim AS builder
+FROM python:3.12-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies into a prefix for clean copy
+RUN apk add --no-cache gcc musl-dev libffi-dev
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ---- Runtime stage ----
-FROM python:3.12-slim
+FROM python:3.12-alpine
 
 WORKDIR /app
 
-# Non-root user
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Copy installed packages from builder
 COPY --from=builder /install /usr/local
-
-# Copy source (no .env files)
 COPY main.py .
 
 USER appuser
