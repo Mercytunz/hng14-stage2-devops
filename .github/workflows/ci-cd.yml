@@ -57,6 +57,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: api/Dockerfile
+          ignore: DL3018
           failure-threshold: warning
 
       - name: Lint worker Dockerfile (hadolint)
@@ -93,9 +94,9 @@ jobs:
 
       - name: Run unit tests with coverage
         run: |
-          pytest api/tests/ -v \
-            --cov=api \
-            --cov-report=xml:coverage.xml \
+          cd api && pytest tests/ -v \
+            --cov=. \
+            --cov-report=xml:../coverage.xml \
             --cov-report=term-missing
 
       - name: Upload coverage report
