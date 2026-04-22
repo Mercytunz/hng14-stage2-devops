@@ -1,4 +1,4 @@
-name: CI/CD Pipeline # v2
+name: CI/CD Pipeline # v3
 
 on:
   push:
@@ -10,9 +10,6 @@ env:
   REGISTRY: localhost:5000
 
 jobs:
-  # ─────────────────────────────────────────────
-  # STAGE 1: LINT
-  # ─────────────────────────────────────────────
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -51,7 +48,7 @@ jobs:
             --env es2021 \
             --parser-options "ecmaVersion:2021" \
             --rule "no-undef: error" \
-            --rule "no-unused-vars: warn" 
+            --rule "no-unused-vars: warn"
 
       - name: Lint Dockerfiles (hadolint)
         uses: hadolint/hadolint-action@v3.1.0
@@ -72,9 +69,6 @@ jobs:
           dockerfile: frontend/Dockerfile
           failure-threshold: warning
 
-  # ─────────────────────────────────────────────
-  # STAGE 2: TEST
-  # ─────────────────────────────────────────────
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -105,9 +99,6 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
-  # ─────────────────────────────────────────────
-  # STAGE 3: BUILD
-  # ─────────────────────────────────────────────
   build:
     name: Build & Push Images
     runs-on: ubuntu-latest
@@ -164,68 +155,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─────────────────────────────────────────────
-  # STAGE 4: SECURITY SCAN
-  # ─────────────────────────────────────────────
   security-scan:
     name: Security Scan (Trivy)
     runs-on: ubuntu-latest
     needs: build
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: network=host
 
-      # Rebuild images so they're available locally for Trivy
       - name: Build images for scanning
         run: |
-          docker buildx build --load -t ${{ env.REGISTRY }}/api:latest ./api
-          docker buildx build --load -t ${{ env.REGISTRY }}/worker:latest ./worker
-          docker buildx build --load -t ${{ env.REGISTRY }}/frontend:latest ./frontend
+          docker buildx build --load -t api:latest ./api
+          docker buildx build --load -t worker:latest ./worker
+          docker buildx build --load -t frontend:latest ./frontend
 
-      - name: Scan API image with Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: "${{ env.REGISTRY }}/api:latest"
-          format: "sarif"
-          output: "trivy-api.sarif"
-          exit-code: "1"
-          severity: "CRITICAL"
-          ignore-unfixed: true
-          scanners: "vuln"
-          trivyignores: ".trivyignore" 
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.69.3
 
-      - name: Scan Worker image with Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: "${{ env.REGISTRY }}/worker:latest"
-          format: "sarif"
-          output: "trivy-worker.sarif"
-          exit-code: "1"
-          severity: "CRITICAL"
-          ignore-unfixed: true
-          scanners: "vuln"
-          trivyignores: ".trivyignore" 
+      - name: Scan API image
+        run: |
+          trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed \
+            --scanners vuln --format sarif --output trivy-api.sarif api:latest
 
-      - name: Scan Frontend image with Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: "${{ env.REGISTRY }}/frontend:latest"
-          format: "sarif"
-          output: "trivy-frontend.sarif"
-          exit-code: "1"
-          severity: "CRITICAL"
-          ignore-unfixed: true
-          scanners: "vuln"
-          trivyignores: ".trivyignore" 
+      - name: Scan Worker image
+        run: |
+          trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed \
+            --scanners vuln --format sarif --output trivy-worker.sarif worker:latest
+
+      - name: Scan Frontend image
+        run: |
+          trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed \
+            --scanners vuln --format sarif --output trivy-frontend.sarif frontend:latest
 
       - name: Upload Trivy SARIF results
         uses: actions/upload-artifact@v4
@@ -234,9 +197,6 @@ jobs:
           name: trivy-sarif-results
           path: "*.sarif"
 
-  # ─────────────────────────────────────────────
-  # STAGE 5: INTEGRATION TEST
-  # ─────────────────────────────────────────────
   integration-test:
     name: Integration Test
     runs-on: ubuntu-latest
@@ -285,7 +245,7 @@ jobs:
           JOB_ID="${{ steps.submit.outputs.job_id }}"
           for i in $(seq 1 15); do
             STATUS=$(curl -sf "http://localhost:3000/status/$JOB_ID" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))")
-            echo "Attempt $i — status: $STATUS"
+            echo "Attempt $i - status: $STATUS"
             if [ "$STATUS" = "completed" ]; then
               echo "Job completed successfully!"
               exit 0
@@ -300,9 +260,6 @@ jobs:
         if: always()
         run: docker compose down -v
 
-  # ─────────────────────────────────────────────
-  # STAGE 6: DEPLOY (main branch only)
-  # ─────────────────────────────────────────────
   deploy:
     name: Deploy (Rolling Update)
     runs-on: ubuntu-latest
@@ -330,27 +287,20 @@ jobs:
             sleep 3
           done
 
-      - name: Rolling update — frontend
+      - name: Rolling update - frontend
         run: |
-          echo "Building new frontend image..."
           docker compose build frontend
-
-          echo "Starting new frontend container..."
           docker compose up -d --no-deps --scale frontend=2 frontend || true
-
-          echo "Waiting for new instance to pass healthcheck (max 60s)..."
           NEW_CONTAINER=$(docker compose ps -q frontend | head -1)
           for i in $(seq 1 12); do
             HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$NEW_CONTAINER" 2>/dev/null || echo "unknown")
             echo "Health: $HEALTH"
             if [ "$HEALTH" = "healthy" ]; then
-              echo "New container is healthy — stopping old one"
               docker compose up -d --no-deps --scale frontend=1 frontend
               exit 0
             fi
             sleep 5
           done
-          echo "New container did not become healthy within 60s — aborting, keeping old container"
           docker compose up -d --no-deps --scale frontend=1 frontend
           exit 1
 
