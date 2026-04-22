@@ -13,7 +13,7 @@ services:
       - app-net
     # Redis is NOT exposed on host machine (no ports mapping)
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a "$$REDIS_PASSWORD" ping || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
